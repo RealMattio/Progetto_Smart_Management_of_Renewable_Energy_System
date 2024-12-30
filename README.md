@@ -1,0 +1,1 @@
+# Progetto_Smart_Management_of_Renewable_Energy_System
