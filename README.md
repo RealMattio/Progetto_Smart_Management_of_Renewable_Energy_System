@@ -26,19 +26,25 @@ I requisiti di tempo dell'utente sono dichiarati:
       $$𝑈𝑅_{𝑎𝑏𝑝} (𝑗)=0 ∀𝑗=𝑘+6,𝑘+7,…,𝑘+24−1$$
 - per HVAC, l'utente dichiara il set point di temperatura $𝑇^{𝑠𝑝} (𝑗)$ per ogni intervallo di tempo nelle prossime 24 ore;
 - per ABP, l'utente dichiara quale programma deve essere eseguito. In questo caso un programma univoco con i seguenti parametri:
-  * energia richiesta per completare la fase i: $𝐸_{(𝑎𝑏𝑝,𝑖)}=[11, 22, 31, 14]$
-  * tempo di esecuzione della fase 𝑖: $𝑇_{(𝑎𝑏𝑝,𝑖)}=[ 2 2 2 2 ]$
-  * potenza massima della fase 𝑖: $𝑃_{(𝑎𝑏𝑝,𝑖)}^{𝑚𝑎𝑥}=[11 22 31 14]$
-  * potenza minima della fase 𝑖: $𝑃_{(𝑎𝑏𝑝,𝑖)}^{𝑚𝑖𝑛}=[0 0 0 0]$
-  * ritardo massimo prima della fase 𝑖: $𝐷_𝑖=[~, 2 2 2]$
+  * energia richiesta per completare la fase i: $𝐸_{(𝑎𝑏𝑝,𝑖)}$=[11, 22, 31, 14]
+  * tempo di esecuzione della fase 𝑖: $𝑇_{(𝑎𝑏𝑝,𝑖)}$=[2, 2, 2, 2]
+  * potenza massima della fase 𝑖: $𝑃_{(𝑎𝑏𝑝,𝑖)}^{𝑚𝑎𝑥}$=[11, 22, 31, 14]
+  * potenza minima della fase 𝑖: $𝑃_{(𝑎𝑏𝑝,𝑖)}^{𝑚𝑖𝑛}$=[0, 0, 0, 0]
+  * ritardo massimo prima della fase 𝑖: $𝐷_𝑖$=[~, 2, 2, 2]
 
 ### Dataset
 I dataset da utilizzare in questo progetto sono i seguenti:
-- $T_{ex}$ : T_ex_rome_campus_bio_medico_2022.mat
+- $T_{ex}$ : External temperature data  
+  File name: T_ex_rome_campus_bio_medico_2022.mat  
+  Variable name: T_ex  
+  Format:[hour,forecasted temperature (°C), actual temperature (°C)]  
 - $P_{pv}$ : da prevedere con il progetto di Deep Learning - Dataset-Project-Deep-Learning-SMRES.xls
 - $P_{ul}$ : da prevedere con il progetto di Deep Learning - Dataset-Project-Deep-Learning-SMRES.xls
 - $c_l$ : F1=0.53276 F2=0.54858 F3=0.46868 [€/kWh]
-- $p_e$ : PUN_2022.mat
+- $p_e$ : Prices data (PUN)  
+  File name: PUN_2022.mat  
+  Variable name: pun  
+  Format: [price [€/MWh]]  
 - $c_f$ : da testare con 0.45 e con 0.60 €/kWh
 
 ## Richieste
