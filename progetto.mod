@@ -1,26 +1,33 @@
-# Sets
+# SETS
 set J ordered;
 set I ordered;
 
-#Parameters
+# PARAMETERS
+# --- Network Import
 param Pnom_i;
+param Pnom_e;
+# --- Non-Renewable DG
+param Pnom_g;
+param eta_g;
+param cf;
+# --- HVAC
 param Pnom_hvac;
 param alpha;
 param beta;
 param eta_c;
 param eta_h;
 param R;
+# --- Battery
 param Pnom_b;
 param Eb;
 param eta_ch;
 param eta_dsc;
+# --- Control specification
 param Tsp;
 param Delta;
 param SoCmin;
 param SoCmax;
-param Pnom_pev;
-param Epev;
-param eta_pev;
+# --- ABP
 param Eabp{I};
 param Tabp{I};
 param Tabp_done{I};
@@ -31,17 +38,15 @@ param t_abp_done{I};
 param Dabp{I};
 param Pmax_abp{I};
 param Pmin_abp{I};
+
 param Tk;
 param SoCk;
-param SoCpevk;
-param SoCpev_obj;
 param P_PV_forecast{J};
 param Tex_forecast{J};
 param c{J};
-param tdSCPV;
+#param tdSCPV;
 param Dts;
 param UR_hvac{J};
-param UR_pev{J};
 param UR_abp{J};
 
 # Variables
@@ -49,7 +54,6 @@ var Pc{J} >= 0;
 var Ph{J} >= 0;
 var Pch{J} >= 0;
 var Pdsc{J} >= 0;
-var Ppev{J} >= 0;
 var Pabp{J,I} >= 0;
 var Pabp_tot{J} >= 0;
 var Pcurt{J}>=0;
@@ -66,7 +70,8 @@ var t_abp{J,I} binary;
 
 
 # Objective function
-minimize total_cost : sum {j in J} (c[j]*Pi[j] + tdSCPV*Pcurt[j]+100*eps[j]);
+# minimize total_cost : sum {j in J} (c[j]*Pi[j] + tdSCPV*Pcurt[j]+100*eps[j]);
+minimize total_cost : sum {j in J} (c[j]*Pi[j] + 100*eps[j]);
 
 #Constraints for HVAC
 subject to con_hvac_1 {j in J: ord(j)=1}:       T[j] == alpha*Tk-beta*R*(eta_c*Pc[j]-eta_h*Ph[j])+beta*Tex_forecast[j];
@@ -85,10 +90,6 @@ subject to con_battery_4  {j in J}:             SoC[j] >= SoCmin;
 subject to con_battery_5  {j in J}:             Pch[j]<= d_b[j]*Pnom_b;
 subject to con_battery_6  {j in J}:             Pdsc[j]<= (1-d_b[j])*Pnom_b;
 
-#Contraints for PEV
-subject to con_pev_1:                           sum {j in J} (Dts*eta_pev*Ppev[j]) == Epev*(SoCpev_obj-SoCpevk);
-subject to con_pev_2 {j in J}:                  Ppev[j]<= UR_pev[j]*Pnom_pev;
-
 #Constraints for ABP
 subject to con_abp_1 {i in I}:                            sum {j in J} (Dts*Pabp[j,i]) = Eabp[i]-Eabp_done[i]; 
 subject to con_abp_2 {i in I}:                            sum {j in J} (d_abp[j,i]) = Tabp[i]-Tabp_done[i];
@@ -106,6 +107,6 @@ subject to con_abp_13 {j in J, i in I}:                   d_abp[j,i] <= UR_abp[j
 subject to con_abp_14 {j in J}:                           Pabp_tot[j] == sum {i in I} (Pabp[j,i]); 
 
 #Constraints for system
-subject to con_system_1 {j in J}:                 Pi[j] == Pc[j]+Ph[j]+Pch[j]-Pdsc[j]-P_PV_forecast[j]+Pcurt[j]+Ppev[j]+Pabp_tot[j];
+subject to con_system_1 {j in J}:                 Pi[j] == Pc[j]+Ph[j]+Pch[j]-Pdsc[j]-P_PV_forecast[j]+Pcurt[j]+Pabp_tot[j];
 subject to con_system_2 {j in J}:                 Pcurt[j] <= P_PV_forecast[j];
 subject to con_system_3 {j in J}:                 Pi[j] <= Pnom_i;
