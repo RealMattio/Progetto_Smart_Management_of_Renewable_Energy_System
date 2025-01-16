@@ -20,7 +20,7 @@ ampl: _display J;Error executing "display" command:
 	no data for set J
 ampl: update data J;data; set J := 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 ; model;ampl: _display I;Error executing "display" command:
 	no data for set I
-ampl: update data I;data; set I := 1 2 3 4 ; model;ampl: _display _PARS;_display 1 0 37
+ampl: update data I;data; set I := 1 2 3 4 ; model;ampl: _display _PARS;_display 1 0 39
 _PARS
 Pnom_i
 Pnom_e
@@ -54,7 +54,9 @@ Pmin_abp
 Tk
 SoCk
 P_PV_forecast
+Pul_forecast
 Tex_forecast
+pun
 c
 Dts
 UR_hvac
@@ -187,10 +189,18 @@ ampl: show P_PV_forecast;param P_PV_forecast{J};
 ampl: option omit_zero_rows 0;_display indexarity('P_PV_forecast');_display 0 1 1
 indexarity('P_PV_forecast')
 1
+ampl: show Pul_forecast;param Pul_forecast{J};
+ampl: option omit_zero_rows 0;_display indexarity('Pul_forecast');_display 0 1 1
+indexarity('Pul_forecast')
+1
 ampl: show Tex_forecast;param Tex_forecast{J};
 ampl: option omit_zero_rows 0;_display indexarity('Tex_forecast');_display 0 1 1
 indexarity('Tex_forecast')
 1
+ampl: show pun;param pun;
+ampl: option omit_zero_rows 0;_display indexarity('pun');_display 0 1 1
+indexarity('pun')
+0
 ampl: show c;param c{J};
 ampl: option omit_zero_rows 0;_display indexarity('c');_display 0 1 1
 indexarity('c')
@@ -211,7 +221,23 @@ ampl: option omit_zero_rows 0;_display Pnom_i;_display 0 1 1
 Pnom_i
 Error executing "display" command:
 	no value for Pnom_i
-ampl: update data Pnom_i; data; param Pnom_i:=250; model;ampl: option omit_zero_rows 0;_display Pnom_hvac;_display 0 1 1
+ampl: update data Pnom_i; data; param Pnom_i:=250; model;ampl: option omit_zero_rows 0;_display Pnom_e;_display 0 1 1
+Pnom_e
+Error executing "display" command:
+	no value for Pnom_e
+ampl: update data Pnom_e; data; param Pnom_e:=120; model;ampl: option omit_zero_rows 0;_display Pnom_g;_display 0 1 1
+Pnom_g
+Error executing "display" command:
+	no value for Pnom_g
+ampl: update data Pnom_g; data; param Pnom_g:=80; model;ampl: option omit_zero_rows 0;_display eta_g;_display 0 1 1
+eta_g
+Error executing "display" command:
+	no value for eta_g
+ampl: update data eta_g; data; param eta_g:=0.6; model;ampl: option omit_zero_rows 0;_display cf;_display 0 1 1
+cf
+Error executing "display" command:
+	no value for cf
+ampl: update data cf; data; param cf:=0.45; model;ampl: option omit_zero_rows 0;_display Pnom_hvac;_display 0 1 1
 Pnom_hvac
 Error executing "display" command:
 	no value for Pnom_hvac
@@ -389,7 +415,11 @@ J
 16
 17
 18
-ampl: update data c; data; param c:=1 0.46868 2 0.46868 3 0.46868 4 0.46868 5 0.46868 6 0.46868 7 0.46868 8 0.54858 9 0.53276 10 0.53276 11 0.53276 12 0.53276 13 0.53276 14 0.53276 15 0.53276 16 0.53276 17 0.53276 18 0.53276 ; model;ampl: option omit_zero_rows 0;_display Tex_forecast;Error executing "display" command:
+ampl: update data c; data; param c:=1 0.46868 2 0.46868 3 0.46868 4 0.46868 5 0.46868 6 0.46868 7 0.46868 8 0.54858 9 0.53276 10 0.53276 11 0.53276 12 0.53276 13 0.53276 14 0.53276 15 0.53276 16 0.53276 17 0.53276 18 0.53276 ; model;ampl: option omit_zero_rows 0;_display pun;_display 0 1 1
+pun
+Error executing "display" command:
+	no value for pun
+ampl: update data pun; data; param pun:=0.33; model;ampl: option omit_zero_rows 0;_display Tex_forecast;Error executing "display" command:
 
 	No values for Tex_forecast.
 ampl: _display {J};_display 1 0 18
@@ -432,7 +462,7 @@ J
 16
 17
 18
-ampl: update data Tex_forecast; data; param Tex_forecast:=1 23 2 22.549064876298175 3 21.919021567253672 4 21.706656908881094 5 21.060925769675727 6 20.544181208251178 7 21.57366007874795 8 23.34883857241326 9 26.54724793511188 10 28.63490970727012 11 30.20619984377878 12 31.525930187875 13 31.513657156998658 14 32.583323634137656 15 32.22958961223504 16 31.68565274515579 17 30.591246103625707 18 29.149417256347228 ; model;ampl: option omit_zero_rows 0;_display P_PV_forecast;Error executing "display" command:
+ampl: update data Tex_forecast; data; param Tex_forecast:=1 23.04487956649416 2 22.27000000000004 3 22 4 21.710000000000036 5 20.930000000000007 6 20.390000000000043 7 21.30000000000001 8 23.57000000000005 9 26.410000000000025 10 28.78000000000003 11 30.180000000000007 12 31.200000000000045 13 31.640000000000043 14 32.200000000000045 15 32.24000000000001 16 31.83000000000004 17 30.420000000000016 18 29.400000000000034 ; model;ampl: option omit_zero_rows 0;_display P_PV_forecast;Error executing "display" command:
 
 	No values for P_PV_forecast.
 ampl: _display {J};_display 1 0 18
@@ -475,15 +505,58 @@ J
 16
 17
 18
-ampl: update data P_PV_forecast; data; param P_PV_forecast:=1 0 2 0 3 0 4 0 5 0 6 0 7 10.014 8 28.98 9 50.538000000000004 10 71.6208 11 89.5968 12 103.65 13 112.854 14 111.9372 15 106.7748 16 99.174 17 82.026 18 61.68480000000001 ; model;ampl: option omit_zero_rows 0;_display Tk;_display 0 1 1
+ampl: update data P_PV_forecast; data; param P_PV_forecast:=1 0 2 0 3 0 4 0 5 0 6 0 7 10.538804008403993 8 25.235680812898718 9 54.5404772105646 10 74.56944791543083 11 93.24112279891554 12 104.7014438150064 13 113.47008733467773 14 111.0308929587784 15 103.36072779607277 16 101.58213610740573 17 81.39330002019621 18 56.888898684350735 ; model;ampl: option omit_zero_rows 0;_display Pul_forecast;Error executing "display" command:
+
+	No values for Pul_forecast.
+ampl: _display {J};_display 1 0 18
+J
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+ampl: _display {J};_display 1 0 18
+J
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+ampl: update data Pul_forecast; data; param Pul_forecast:=1 63.64043373340858 2 51.12793576119726 3 49.655062674725 4 45.48891484618654 5 45.58484642154808 6 48.86382299070378 7 49.69252503469238 8 65.20140000004436 9 72.02649597058975 10 80.92761973260359 11 63.96848892393518 12 64.19224999399069 13 78.16387909612246 14 78.40382294344926 15 80.69577982839812 16 78.1121898557903 17 60.37894084598005 18 57.99736765881416 ; model;ampl: option omit_zero_rows 0;_display Tk;_display 0 1 1
 Tk
 Error executing "display" command:
 	no value for Tk
-ampl: update data Tk; data; param Tk:=25.867427329666658; model;ampl: option omit_zero_rows 0;_display SoCk;_display 0 1 1
+ampl: update data Tk; data; param Tk:=24.18186373218942; model;ampl: option omit_zero_rows 0;_display SoCk;_display 0 1 1
 SoCk
 Error executing "display" command:
 	no value for SoCk
-ampl: update data SoCk; data; param SoCk:=1; model;ampl: option omit_zero_rows 0;_display UR_hvac;Error executing "display" command:
+ampl: update data SoCk; data; param SoCk:=0.5652768948801106; model;ampl: option omit_zero_rows 0;_display UR_hvac;Error executing "display" command:
 
 	No values for UR_hvac.
 ampl: _display {J};_display 1 0 18
@@ -569,7 +642,7 @@ J
 16
 17
 18
-ampl: update data UR_abp; data; param UR_abp:=1 1 2 1 3 1 4 1 5 1 6 1 7 1 8 1 9 1 10 0 11 0 12 0 13 0 14 0 15 0 16 0 17 0 18 0 ; model;ampl: option omit_zero_rows 0;_display s_abp_k1;Error executing "display" command:
+ampl: update data UR_abp; data; param UR_abp:=1 1 2 1 3 1 4 1 5 1 6 1 7 1 8 0 9 0 10 0 11 0 12 0 13 0 14 0 15 0 16 0 17 0 18 0 ; model;ampl: option omit_zero_rows 0;_display s_abp_k1;Error executing "display" command:
 
 	No values for s_abp_k1.
 ampl: _display {I};_display 1 0 4
@@ -599,7 +672,7 @@ I
 2
 3
 4
-ampl: update data d_abp_k1; data; param d_abp_k1:=1 0 2 0 3 0 4 0 ; model;ampl: option omit_zero_rows 0;_display Tabp_done;Error executing "display" command:
+ampl: update data d_abp_k1; data; param d_abp_k1:=1 1 2 0 3 0 4 0 ; model;ampl: option omit_zero_rows 0;_display Tabp_done;Error executing "display" command:
 
 	No values for Tabp_done.
 ampl: _display {I};_display 1 0 4
@@ -614,7 +687,7 @@ I
 2
 3
 4
-ampl: update data Tabp_done; data; param Tabp_done:=1 0 2 0 3 0 4 0 ; model;ampl: option omit_zero_rows 0;_display t_abp_done;Error executing "display" command:
+ampl: update data Tabp_done; data; param Tabp_done:=1 2 2 0 3 0 4 0 ; model;ampl: option omit_zero_rows 0;_display t_abp_done;Error executing "display" command:
 
 	No values for t_abp_done.
 ampl: _display {I};_display 1 0 4
@@ -644,11 +717,9 @@ I
 2
 3
 4
-ampl: update data Eabp_done; data; param Eabp_done:=1 0 2 0 3 0 4 0 ; model;ampl: solve ;CPLEX 22.1.1: CPLEX 22.1.1: infeasible problem
-0 simplex iterations
-
-suffix dunbdd OUT;
-ampl: _display _VARS;_display 1 0 17
+ampl: update data Eabp_done; data; param Eabp_done:=1 11 2 0 3 0 4 0 ; model;ampl: solve ;CPLEX 22.1.1: CPLEX 22.1.1: optimal solution; objective 129.2074449
+72 simplex iterations
+ampl: _display _VARS;_display 1 0 18
 _VARS
 Pc
 Ph
@@ -656,17 +727,18 @@ Pch
 Pdsc
 Pabp
 Pabp_tot
-Pcurt
+Pg
 Pi
+Pe
 T
 SoC
-eps
 d_c
 d_h
 d_b
 d_abp
 s_abp
 t_abp
+d_g
 ampl: show Pc;var Pc{J}  >= 0;
 ampl: option omit_zero_rows 0;_display indexarity('Pc');_display 0 1 1
 indexarity('Pc')
@@ -691,13 +763,17 @@ ampl: show Pabp_tot;var Pabp_tot{J}  >= 0;
 ampl: option omit_zero_rows 0;_display indexarity('Pabp_tot');_display 0 1 1
 indexarity('Pabp_tot')
 1
-ampl: show Pcurt;var Pcurt{J}  >= 0;
-ampl: option omit_zero_rows 0;_display indexarity('Pcurt');_display 0 1 1
-indexarity('Pcurt')
+ampl: show Pg;var Pg{J}  >= 0;
+ampl: option omit_zero_rows 0;_display indexarity('Pg');_display 0 1 1
+indexarity('Pg')
 1
 ampl: show Pi;var Pi{J}  >= 0;
 ampl: option omit_zero_rows 0;_display indexarity('Pi');_display 0 1 1
 indexarity('Pi')
+1
+ampl: show Pe;var Pe{J}  >= 0;
+ampl: option omit_zero_rows 0;_display indexarity('Pe');_display 0 1 1
+indexarity('Pe')
 1
 ampl: show T;var T{J};
 ampl: option omit_zero_rows 0;_display indexarity('T');_display 0 1 1
@@ -706,10 +782,6 @@ indexarity('T')
 ampl: show SoC;var SoC{J};
 ampl: option omit_zero_rows 0;_display indexarity('SoC');_display 0 1 1
 indexarity('SoC')
-1
-ampl: show eps;var eps{J}  >= 0;
-ampl: option omit_zero_rows 0;_display indexarity('eps');_display 0 1 1
-indexarity('eps')
 1
 ampl: show d_c;var d_c{J}  binary;
 ampl: option omit_zero_rows 0;_display indexarity('d_c');_display 0 1 1
@@ -735,6 +807,10 @@ ampl: show t_abp;var t_abp{J, I}  binary;
 ampl: option omit_zero_rows 0;_display indexarity('t_abp');_display 0 1 1
 indexarity('t_abp')
 2
+ampl: show d_g;var d_g{J}  binary;
+ampl: option omit_zero_rows 0;_display indexarity('d_g');_display 0 1 1
+indexarity('d_g')
+1
 ampl: option omit_zero_rows 0;_display Pc.val;_display 1 1 18
 Pc.val
 1,0
@@ -747,14 +823,14 @@ Pc.val
 8,0
 9,0
 10,0
-11,0
-12,0
-13,0
-14,0
-15,0
-16,0
-17,0
-18,0
+11,1.413082555487058
+12,1.994459833795027
+13,2.116343490304724
+14,2.271468144044332
+15,2.282548476454292
+16,2.168975069252092
+17,1.778393351800555
+18,1.495844875346267
 ampl: option omit_zero_rows 0;_display Ph.val;_display 1 1 18
 Ph.val
 1,0
@@ -791,7 +867,7 @@ Pch.val
 12,0
 13,0
 14,0
-15,0
+15,2.885666315578607
 16,0
 17,0
 18,0
@@ -799,10 +875,70 @@ ampl: option omit_zero_rows 0;_display Pdsc.val;_display 1 1 18
 Pdsc.val
 1,0
 2,0
+3,2.492047756072211
+4,0
+5,0
+6,0
+7,0
+8,39.96571918714564
+9,17.48601876002515
+10,6.35817181717276
+11,0
+12,0
+13,0
+14,0
+15,0
+16,0
+17,0
+18,2.604313849809694
+ampl: option omit_zero_rows 0;_display Pi.val;_display 1 1 18
+Pi.val
+1,85.64043373340857
+2,51.12793576119726
+3,47.16301491865279
+4,45.48891484618654
+5,76.58484642154808
+6,62.86382299070378
+7,39.15372102628839
+8,0
+9,0
+10,0
+11,0
+12,0
+13,0
+14,0
+15,0
+16,0
+17,0
+18,0
+ampl: option omit_zero_rows 0;_display Pe.val;_display 1 1 18
+Pe.val
+1,0
+2,0
 3,0
 4,0
 5,0
 6,0
+7,0
+8,0
+9,0
+10,0
+11,27.8595513194933
+12,38.51473398722069
+13,33.18986474825055
+14,30.35560187128481
+15,17.49673317564175
+16,21.30097118236333
+17,19.2359658224156
+18,0
+ampl: option omit_zero_rows 0;_display Pabp_tot.val;_display 1 1 18
+Pabp_tot.val
+1,22
+2,0
+3,0
+4,0
+5,31
+6,14
 7,0
 8,0
 9,0
@@ -815,8 +951,8 @@ Pdsc.val
 16,0
 17,0
 18,0
-ampl: option omit_zero_rows 0;_display Pi.val;_display 1 1 18
-Pi.val
+ampl: option omit_zero_rows 0;_display Pg.val;_display 1 1 18
+Pg.val
 1,0
 2,0
 3,0
@@ -835,8 +971,8 @@ Pi.val
 16,0
 17,0
 18,0
-ampl: option omit_zero_rows 0;_display Pabp_tot.val;_display 1 1 18
-Pabp_tot.val
+ampl: option omit_zero_rows 0;_display d_g.val;_display 1 1 18
+d_g.val
 1,0
 2,0
 3,0
@@ -857,86 +993,86 @@ Pabp_tot.val
 18,0
 ampl: option omit_zero_rows 0;_display s_abp.val;_display 2 1 72
 s_abp.val
-1,1,0
+1,1,1
 1,2,0
 1,3,0
 1,4,0
-2,1,0
+2,1,1
 2,2,0
 2,3,0
 2,4,0
-3,1,0
-3,2,0
+3,1,1
+3,2,1
 3,3,0
 3,4,0
-4,1,0
-4,2,0
+4,1,1
+4,2,1
 4,3,0
 4,4,0
-5,1,0
-5,2,0
+5,1,1
+5,2,1
 5,3,0
 5,4,0
-6,1,0
-6,2,0
-6,3,0
+6,1,1
+6,2,1
+6,3,1
 6,4,0
-7,1,0
-7,2,0
-7,3,0
+7,1,1
+7,2,1
+7,3,1
 7,4,0
-8,1,0
-8,2,0
-8,3,0
-8,4,0
-9,1,0
-9,2,0
-9,3,0
-9,4,0
-10,1,0
-10,2,0
-10,3,0
-10,4,0
-11,1,0
-11,2,0
-11,3,0
-11,4,0
-12,1,0
-12,2,0
-12,3,0
-12,4,0
-13,1,0
-13,2,0
-13,3,0
-13,4,0
-14,1,0
-14,2,0
-14,3,0
-14,4,0
-15,1,0
-15,2,0
-15,3,0
-15,4,0
-16,1,0
-16,2,0
-16,3,0
-16,4,0
-17,1,0
-17,2,0
-17,3,0
-17,4,0
-18,1,0
-18,2,0
-18,3,0
-18,4,0
+8,1,1
+8,2,1
+8,3,1
+8,4,1
+9,1,1
+9,2,1
+9,3,1
+9,4,1
+10,1,1
+10,2,1
+10,3,1
+10,4,1
+11,1,1
+11,2,1
+11,3,1
+11,4,1
+12,1,1
+12,2,1
+12,3,1
+12,4,1
+13,1,1
+13,2,1
+13,3,1
+13,4,1
+14,1,1
+14,2,1
+14,3,1
+14,4,1
+15,1,1
+15,2,1
+15,3,1
+15,4,1
+16,1,1
+16,2,1
+16,3,1
+16,4,1
+17,1,1
+17,2,1
+17,3,1
+17,4,1
+18,1,1
+18,2,1
+18,3,1
+18,4,1
 ampl: option omit_zero_rows 0;_display d_abp.val;_display 2 1 72
 d_abp.val
 1,1,0
-1,2,0
+1,2,1
 1,3,0
 1,4,0
 2,1,0
-2,2,0
+2,2,1
 2,3,0
 2,4,0
 3,1,0
@@ -945,20 +1081,20 @@ d_abp.val
 3,4,0
 4,1,0
 4,2,0
-4,3,0
+4,3,1
 4,4,0
 5,1,0
 5,2,0
-5,3,0
+5,3,1
 5,4,0
 6,1,0
 6,2,0
 6,3,0
-6,4,0
+6,4,1
 7,1,0
 7,2,0
 7,3,0
-7,4,0
+7,4,1
 8,1,0
 8,2,0
 8,3,0

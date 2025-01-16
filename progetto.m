@@ -1,5 +1,8 @@
 %% Problem data
-
+clear all
+close all
+clc
+setupAMPL
 % Network import 
 parms.Pnom_i = 250; % maximal imported power [kW]
 parms.Pnom_e = 120; % maximal exported power [kW]
@@ -64,19 +67,28 @@ parms.Dts = 1; % control sampling time [h]
 
 % External temperature data 
 load T_ex_rome_campus_bio_medico_2022.mat
-% [month,day,hour,forecasted temperature (°C), actual temperature (°C)]
+% Format:[hour,forecasted temperature (°C), actual temperature (°C)] -
+% Variable name T_ex
 T_ex = T_ex(idxs,:);
 
 % Solar irradiation data
 load FALSA_previsione_irraggiamento.mat
-% [day,forecasted Ir (°C), actual Ir (°C)]
+% Format:[hour,forecasted Ir (°C), actual Ir (°C)] - Variable name: Ir
 Ir = Ir(idxs,:);
 
-% VANNO AGGIUNTI GLI UFFICI!!
+% Uncontrolled loads
+load FALSA_previsione_uffici.mat
+% Format: [hour, forecasted power [W], actual power [W]] - Variable name : Uffici
+Uffici = Uffici(idxs,:);
+Uffici(:,[2,3]) = Uffici(:,[2,3])/1000;
 
-% Prices data 
-load energy_prices_january_july_2021
+% Energy prices data 
+% Exported energy
+% Format: [price [€/MWh]] - Variable name: pun
+load PUN_2022.mat
+pun = pun(idxs,:)/1000; % [€/kWh]
 
+% Imported energy
 priceF1 = 0.53276; % F1 price [eur/kWh]
 priceF2 = 0.54858; % F2 price [eur/kWh]
 priceF3 = 0.46868; % F3 price [eur/kWh]
@@ -87,7 +99,6 @@ cday = [ones(6,1)*priceF3;
         ones(4,1)*priceF2;
         ones(2,1)*priceF3];  
 c = [cday;cday;cday;cday]; %two days+1 day for forecasts
-%parms.tdSCPV = 8.22/1000; % PV self-consumption tarif discount [€/kWh]
 
 
 %% Control parameters
@@ -111,9 +122,11 @@ Pch = zeros(Tf,1);       % battery charging power [kW]
 Pdsc = zeros(Tf,1);      % battery discharging power [kW]
 Ppv = zeros(Tf,1);       % PV generation [kW]
 Pi = zeros(Tf,1);        % Imported power [kW]
-Pscpv = zeros(Tf,1);     % Self-consumed PV power [kW]
-Pcurt = zeros(Tf,1);     % PV Curtailement [kW]
-
+Pi_eff = zeros(Tf,1);    % Effectively imported power [kW]
+Pe = zeros(Tf,1);        % Exported power [kW]
+Pg = zeros(Tf,1);        % Diesel generated power [kW]
+d_g = zeros(Tf,1);       % On-off DG support varaible
+Pul = zeros(Tf,1);       % Uncontrolled loads [kW]
 Pabp = zeros(Tf,1);      % Pabp Power Consumption [kW]
 T = zeros(Tf+1,1);       % Internal air temperature [°C]
 T(1) = T0;               % Initial Internal air temperature [°C]
@@ -123,7 +136,6 @@ SoC(1) = SoC0;           % Initial Battery state of charge [°C]
 UR_hvac = zeros(Tf,1);   % User Requirements for HVAC
 
 UR_abp = zeros(Tf,1);    % User Requirements for ABP 
-%d1 = 0;                  % day counter for PEV (to define user requirements)
 d2 = 0;                  % day counter for ABP (to define user requirements)
 
 % intialize variables to manage ABP
@@ -133,12 +145,12 @@ abp_varsk.d_abpk = zeros(parms.n_abp_phases,1);
 abp_varsk.Eabp_donek =  parms.Eabp; 
 abp_varsk.Tabp_donek =  parms.Tabp; 
 
-rng(11)
+%rng(11)
 
 ur_hvac = [zeros(6,1);ones(12,1);zeros(6,1)];
 ur_hvac = repmat(ur_hvac,4,1);
 
-k_start_abp = randi(5)+18; % abp starting time
+k_start_abp = randi(10); % abp starting time - al massimo dura 14 ore, quindi per farlo finire nella fine della giornata deve iniziare al massimo alla decima ora
 for k=1:Tf
 
     % get measurement
@@ -147,9 +159,11 @@ for k=1:Tf
     
     % get forecasts
     ck = c(k:k+parms.T-1);
-    T_ex_forecast_k = [T_ex(k,2);
-                       T_ex(k+1:k+parms.T-1,3)];
+    T_ex_forecast_k = [T_ex(k,3);
+                       T_ex(k+1:k+parms.T-1,2)];
     P_PV_forecast_k = parms.Pnom_PV*Ir(k:k+parms.T-1,2);
+    pun_k = pun(k);
+    Pul_forecast_k = Uffici(k:k+parms.T-1,2);
     
     % get user requirements
     
@@ -175,7 +189,7 @@ for k=1:Tf
     end
     
     % compute control 
-    [Pc(k),Ph(k),hat_Pchk,hat_Pdsck,hat_Pik,Pabp(k),abp_varsk] = compute_control_step(parms,T_ex_forecast_k,P_PV_forecast_k,Tk,SoCk,ck,UR_hvac_k,UR_abp_k,abp_varsk);
+    [Pc(k),Ph(k),hat_Pchk,hat_Pdsck,hat_Pik,hat_Pek,Pabp(k),Pg(k),abp_varsk,d_g(k)] = compute_control_step(parms,pun_k,T_ex_forecast_k,P_PV_forecast_k,Pul_forecast_k,Tk,SoCk,ck,UR_hvac_k,UR_abp_k,abp_varsk);
     
     
     % Compute battery limits
@@ -199,17 +213,20 @@ for k=1:Tf
     
     
     % simulate real system
-    Ppv(k) = parms.Pnom_PV*Ir(k,2);
-    Pi(k) = Pc(k) + Ph(k) + hat_Pchk - hat_Pdsck - Ppv(k) + Pabp(k);
+    Ppv(k) = parms.Pnom_PV*Ir(k,3);
+    Pul(k) = Uffici(k,3);
+    Pi(k) = Pc(k) + Ph(k) + hat_Pchk - hat_Pdsck - Ppv(k) + Pabp(k) + hat_Pek - Pg(k) + Pul(k);
+    Pe(k) = hat_Pek; % La potenza esportata è quella che l'ottimizzatore decide
+    %Pe(k) = hat_Pek + 
     
     if battery_compensation
         if Pi(k) ~= hat_Pik % forecast error must be compensated
-            Pbk = hat_Pik -Pc(k) - Ph(k) + Ppv(k) - Pabp(k);% Try to compensate with battery
+            Pbk = hat_Pik -Pc(k) - Ph(k) + Ppv(k) - Pabp(k) - Pul(k) + Pg(k);% Try to compensate with battery
             Pbk = max(Pbk,temp_Pb_min); % Saturate battery
             Pbk = min(Pbk,temp_Pb_max);
             Pch(k) = max(0,Pbk);
             Pdsc(k) = -min(0,Pbk);
-            Pi(k) = Pc(k) + Ph(k) + Pch(k) - Pdsc(k) - Ppv(k) + Pabp(k);
+            Pi(k) = Pc(k) + Ph(k) + Pch(k) - Pdsc(k) - Ppv(k) + Pabp(k) + Pul(k) - Pg(k);
         else
             Pch(k) = hat_Pchk;
             Pdsc(k) = hat_Pdsck;
@@ -219,13 +236,7 @@ for k=1:Tf
         Pdsc(k) = hat_Pdsck;
     end
     
-    if Pi(k)<0
-        Pcurt(k) = -Pi(k);
-        Pscpv(k) = Ppv(k)-Pcurt(k);
-        Pi(k) = 0;
-    else
-        Pscpv(k) = Ppv(k);
-    end
+   
     T(k+1) = parms.alpha*T(k)-parms.beta*parms.R*(parms.eta_c*Pc(k)-parms.eta_h*Ph(k))+parms.beta*T_ex(k,2);
     SoC(k+1) = SoC(k) + parms.Dts/parms.Eb*(parms.eta_ch*Pch(k)-1/parms.eta_dsc*Pdsc(k));
     
@@ -325,51 +336,48 @@ legend('ABP User Requirements')
 % Powers
 figure(6)
 hold on
-plot(0:Tf-1,Pc+Ph,'LineWidth',1.5)
-plot(0:Tf-1,Pch-Pdsc,'LineWidth',1.5)
-plot(0:Tf-1,-Ppv,'LineWidth',2.5)
-plot(0:Tf-1,-Pscpv,'LineWidth',1.5)
-plot(0:Tf-1,Pabp,'LineWidth',1.5)
-plot(0:Tf-1,Pi,'k','LineWidth',2)
+plot(0:Tf-1,Pc+Ph,'cyan','LineWidth',1.5)
+plot(0:Tf-1,Pch-Pdsc,'green','LineWidth',1.5)
+plot(0:Tf-1,Ppv,'Color', [1, 0.5, 0],'LineWidth',1.5)
+plot(0:Tf-1,Pul,'yellow','LineWidth',1.5)
+plot(0:Tf-1,Pabp,'blue','LineWidth',1.5)
+plot(0:Tf-1,Pg,'Color', [0.5, 0.5, 0.5],'LineWidth',1.5)
+plot(0:Tf-1,Pi,'black','LineWidth',2)
+plot(0:Tf-1,Pe,'red','LineWidth',2)
+%plot(0:Tf-1,Pc+Ph+Pul+Pabp+Pch,'--') %energia assorbita
+%plot(0:Tf-1,Ppv+Pg+Pi+Pdsc,'-.') % energia prodotta e importata
 grid on
 box on
-legend('HVAC Power Consumption','Battery Power Exchange','PV Generation','PV Self-Consumption','ABP Power Consumption','Imported power')
+legend('HVAC Power Consumption','Battery Power Exchange','PV Generation','Uncontrolled Loads','ABP Power Consumption','Diesel Generated Power','Imported power','Exported Power')
+%legend('HVAC Power Consumption','Battery Power Exchange','PV Generation','Uncontrolled Loads','ABP Power Consumption','Diesel Generated Power','Imported power','Exported Power','Absorbed Power', 'Produced Power')
 xlim([0 Tf-1])
 xlabel('Time [h]')
 ylabel('Power [kW]')
 
 % Costs
 figure(7)
-subplot(3,1,1)
-stairs(0:Tf-1,Pi.*c(1:Tf)*parms.Dts,'LineWidth',2.5)
-%hold on
-%stairs(0:Tf-1,-Pscpv*parms.tdSCPV*parms.Dts,'LineWidth',2.5)
-%hold on
-%stairs(0:Tf-1,Pi.*c(1:Tf)*parms.Dts-Pscpv*parms.tdSCPV*parms.Dts,'k','LineWidth',1)
+subplot(2,1,1)
+stairs(0:Tf-1,Pi.*c(1:Tf)*parms.Dts,'r','LineWidth',2.5)
+hold on
+stairs(0:Tf-1,Pe.*pun(1:Tf)*parms.Dts,'g','LineWidth',2.5)
+hold on
+stairs(0:Tf-1,parms.cf*parms.Pnom_g.*d_g,'b','LineWidth',2.5)
 xlim([0 Tf-1])
 grid on
 ylabel('Hourly Energy Cost [€]')
-%legend('Imported energy cost','Self-consumed PV tarif discount','Total cost')
-legend('Total cost')
-subplot(3,1,2)
-stairs(0:Tf-1,cumsum(Pi.*c(1:Tf)*parms.Dts-Pscpv*parms.tdSCPV*parms.Dts),'LineWidth',1.5)
+legend('Imported energy cost','Exported energy income','Diesel generated energy cost')
+
+subplot(2,1,2)
+%stairs(0:Tf-1,cumsum(Pi.*c(1:Tf)*parms.Dts-Pscpv*parms.tdSCPV*parms.Dts),'LineWidth',1.5)
+stairs(0:Tf-1,Pi.*c(1:Tf)*parms.Dts-Pe.*pun(1:Tf)*parms.Dts+parms.cf*parms.Pnom_g.*d_g,'LineWidth',2.5)
 xlim([0 Tf-1])
 grid on
 ylabel('Total Energy Cost [€]')
-subplot(3,1,3)
-stairs(0:Tf-1,c(1:Tf),'LineWidth',1.5)
-hold on
-stairs(0:Tf-1,ones(Tf,1)*parms.tdSCPV,'LineWidth',1.5)
-xlim([0 Tf-1])
-grid on
-xlabel('Time [h]')
-ylabel('[€/kWh]')
-legend('Energy Price','Self-consumed PV tarif discount')
 
 
 
 %% MPC step
-function [Pck,Phk,Pchk,Pdsck,Pik,Pabpk,abp_varsk] = compute_control_step(parms,T_ex_forecast_k,P_PV_forecast_k,T_k,SoC_k,ck,UR_hvac_k,UR_abp_k,abp_varsk1)
+function [Pck,Phk,Pchk,Pdsck,Pik,Pek,Pabpk,Pgk,abp_varsk,d_g_k] = compute_control_step(parms,pun_k,T_ex_forecast_k,P_PV_forecast_k,Pul_forecast_k,T_k,SoC_k,ck,UR_hvac_k,UR_abp_k,abp_varsk1)
 %% AMPL SETUP
 %setupAMPL %MATLAB path setup
 ampl = AMPL('.\AMPL'); %open AMPL session
@@ -394,6 +402,18 @@ I.setValues(i);
 % constant parameters
 Pnom_i = ampl.getParameter('Pnom_i');
 Pnom_i.setValues(parms.Pnom_i);
+
+Pnom_e = ampl.getParameter('Pnom_e');
+Pnom_e.setValues(parms.Pnom_e);
+
+Pnom_g = ampl.getParameter('Pnom_g');
+Pnom_g.setValues(parms.Pnom_g);
+
+eta_g = ampl.getParameter('eta_g');
+eta_g.setValues(parms.eta_g);
+
+cf = ampl.getParameter('cf');
+cf.setValues(parms.cf);
 
 Pnom_hvac = ampl.getParameter('Pnom_hvac');
 Pnom_hvac.setValues(parms.Pnom_hvac);
@@ -452,8 +472,6 @@ Pmax_abp.setValues(parms.Pmax_abp);
 Pmin_abp = ampl.getParameter('Pmin_abp');
 Pmin_abp.setValues(parms.Pmin_abp);
 
-%tdSCPV = ampl.getParameter('tdSCPV');
-%tdSCPV.setValues(parms.tdSCPV);
 
 Dts = ampl.getParameter('Dts');
 Dts.setValues(parms.Dts);
@@ -462,11 +480,17 @@ Dts.setValues(parms.Dts);
 c = ampl.getParameter('c');
 c.setValues(ck);
 
+pun = ampl.getParameter('pun');
+pun.setValues(pun_k);
+
 Tex_forecast  = ampl.getParameter('Tex_forecast');
 Tex_forecast.setValues(T_ex_forecast_k);
 
 P_PV_forecast  = ampl.getParameter('P_PV_forecast');
 P_PV_forecast.setValues(P_PV_forecast_k);
+
+Pul_forecast = ampl.getParameter('Pul_forecast');
+Pul_forecast.setValues(Pul_forecast_k);
 
 Tk  = ampl.getParameter('Tk');
 Tk.setValues(T_k);
@@ -519,9 +543,22 @@ Pi=ampl.getVariable('Pi');
 Pi=Pi.getValues;
 Pi=Pi.getColumnAsDoubles('Pi.val');
 
+Pe=ampl.getVariable('Pe'); 
+Pe=Pe.getValues;
+Pe=Pe.getColumnAsDoubles('Pe.val');
+
 Pabp=ampl.getVariable('Pabp_tot'); 
 Pabp=Pabp.getValues;
 Pabp=Pabp.getColumnAsDoubles('Pabp_tot.val');
+
+Pg=ampl.getVariable('Pg');
+Pg=Pg.getValues;
+Pg=Pg.getColumnAsDoubles('Pg.val');
+
+d_g=ampl.getVariable('d_g'); 
+d_g=d_g.getValues;
+d_g=d_g.getColumnAsDoubles('d_g.val');
+% d_g=reshape(d_g,parms.n_abp_phases,parms.T);
 
 s_abp=ampl.getVariable('s_abp'); 
 s_abp=s_abp.getValues;
@@ -544,11 +581,14 @@ Phk = Ph(1);
 Pchk = Pch(1); 
 Pdsck = Pdsc(1); 
 Pik = Pi(1); 
+Pek = Pe(1);
+Pgk = Pg(1);
 Pabpk = Pabp(1);
 abp_varsk = abp_varsk1;
 abp_varsk.s_abpk = s_abp(:,1); 
 abp_varsk.d_abpk = d_abp(:,1);  
 abp_varsk.t_abpk = t_abp(:,1); 
+d_g_k = d_g(1);
 
 ampl.close(); % close the AMPL Session
 

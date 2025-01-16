@@ -42,9 +42,7 @@ param Pmin_abp{I};
 param Tk;
 param SoCk;
 param P_PV_forecast{J};
-param Pul_forecast{J};
 param Tex_forecast{J};
-param pun;
 param c{J};
 #param tdSCPV;
 param Dts;
@@ -58,28 +56,28 @@ var Pch{J} >= 0;
 var Pdsc{J} >= 0;
 var Pabp{J,I} >= 0;
 var Pabp_tot{J} >= 0;
-var Pg{J}>=0;
+var Pcurt{J}>=0;
 var Pi{J}>=0;
-var Pe{J}>=0;
 var T{J};
 var SoC{J};
+var eps{J}>=0;
 var d_c{J} binary;
 var d_h{J} binary;
 var d_b{J} binary;
 var d_abp{J,I} binary;
 var s_abp{J,I} binary;
 var t_abp{J,I} binary;
-var d_g{J} binary;
+
 
 # Objective function
 # minimize total_cost : sum {j in J} (c[j]*Pi[j] + tdSCPV*Pcurt[j]+100*eps[j]);
-minimize total_cost : sum {j in J} (c[j]*Pi[j] - pun*Pe[j] + cf*Pnom_g*d_g[j]);
+minimize total_cost : sum {j in J} (c[j]*Pi[j] + 100*eps[j]);
 
 #Constraints for HVAC
 subject to con_hvac_1 {j in J: ord(j)=1}:       T[j] == alpha*Tk-beta*R*(eta_c*Pc[j]-eta_h*Ph[j])+beta*Tex_forecast[j];
 subject to con_hvac_2 {j in J: ord(j)>1}:       T[j] == alpha*T[j-1]-beta*R*(eta_c*Pc[j]-eta_h*Ph[j])+beta*Tex_forecast[j];
-subject to con_hvac_3 {j in J}:                 T[j]*UR_hvac[j] <= (Tsp+Delta)*UR_hvac[j];
-subject to con_hvac_4 {j in J}:                 T[j]*UR_hvac[j] >= (Tsp-Delta)*UR_hvac[j];
+subject to con_hvac_3 {j in J}:                 T[j]*UR_hvac[j] <= (Tsp+Delta)*UR_hvac[j]+eps[j];
+subject to con_hvac_4 {j in J}:                 T[j]*UR_hvac[j] >= (Tsp-Delta)*UR_hvac[j]-eps[j];
 subject to con_hvac_5 {j in J}:                 Pc[j]<= d_c[j]*Pnom_hvac;
 subject to con_hvac_6 {j in J}:                 Ph[j]<= d_h[j]*Pnom_hvac;
 subject to con_hvac_7 {j in J}:                 d_h[j] + d_c[j]<= UR_hvac[j];
@@ -108,13 +106,7 @@ subject to con_abp_12 {i in I: ord(i)>1}:                 sum {j in J} (t_abp[j,
 subject to con_abp_13 {j in J, i in I}:                   d_abp[j,i] <= UR_abp[j];
 subject to con_abp_14 {j in J}:                           Pabp_tot[j] == sum {i in I} (Pabp[j,i]); 
 
-#Constraints for Diesel Generator
-subject to con_DG_1 {j in J}:                     Pg[j] = d_g[j]*Pnom_g*eta_g;
-
 #Constraints for system
-subject to con_system_1 {j in J}:                 Pi[j] - Pe[j] == Pc[j]+Ph[j]+Pch[j]-Pdsc[j]-P_PV_forecast[j]+Pabp_tot[j]+Pul_forecast[j]-Pg[j];
-#subject to con_system_1 {j in J}:                 Pi[j] - Pe[j] == Pc[j]+Ph[j]+Pch[j]-Pdsc[j]-P_PV_forecast[j]+Pabp_tot[j]-Pg[j];
-subject to con_system_2 {j in J}:                 Pi[j] <= Pnom_i;
-subject to con_system_3 {j in J}:                 Pe[j] <= Pnom_e;
-#subject to con_system_4 {j in J}:                 Pe[j] <= P_PV_forecast[j]+Pdsc[j]; #without DGs
-#subject to con_system_4 {j in J}:                 Pe[j] <= P_PV_forecast[j]+Pdsc[j]+Pg[j]; #with DGs
+subject to con_system_1 {j in J}:                 Pi[j] == Pc[j]+Ph[j]+Pch[j]-Pdsc[j]-P_PV_forecast[j]+Pcurt[j]+Pabp_tot[j];
+subject to con_system_2 {j in J}:                 Pcurt[j] <= P_PV_forecast[j];
+subject to con_system_3 {j in J}:                 Pi[j] <= Pnom_i;

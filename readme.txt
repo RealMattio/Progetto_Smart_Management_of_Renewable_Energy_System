@@ -20,6 +20,10 @@ load  PUN_2022.mat
 Variable name: pun
 Format: [price [€/MWh]]
 
+Dataset.Project-Deep-Learning-SMRES.xls
+2 sheets: 2021-2022
+Format: [Data, Ora, Potenza uffici [W], Temperatura [K], Nuvolosità [%], Irraggiamento [kWh/m2]]
+
 1 Year Renewable Energy Generation Profiles in p.u. (wind and PV)
 load res_1_year_pu.mat
 Variables name: P_pv, P_w
