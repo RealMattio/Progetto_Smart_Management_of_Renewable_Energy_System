@@ -17,7 +17,7 @@ parms.cf = 0.45; % price of fuel [€/kWh]
 parms.R = 1.9; %walls thermal resistance [°C/kW]
 parms.C = 3.925; % thermal capacitance of air [kWh/°C]
 parms.eta_c = 1.9; % cooling system COP
-parms.eta_h = 0.85; % hating system efficiency
+parms.eta_h = 0.85; % heating system efficiency
 parms.Pnom_hvac = 12; % nominal power of the cooling system [kW]
 
 % PV generator data
@@ -43,16 +43,14 @@ parms.Pmin_abp = [0 0 0 0]'; % minimal power for each phase [kW]
 
 % Selection of days
 months_days = [31 28 31 30 31 30 31 31 30 31 30 31];
-m1 = 2; %starting month
-d1 = 15; %staring day
-m2 = 2; %end month
-d2 = 18; %end day
+m1 = 3; %starting month
+d1 = 31; %staring day
+m2 = 4; %end month
+d2 = 3; %end day
 idxs = (sum(months_days(1:m1-1))+(d1-1))*24+1:(sum(months_days(1:m2-1))+d2)*24+1;
 
 % Control specifications data
-% ATTENTION: non è implementato il controllo sull'impostazione del setpoint
-% della temperatura! Pertanto in questa fase è necessario che il periodo di
-% simulazione corrisponda allo stesso mese
+% Se l'indice è minore di 2160 o maggiore di 5832 
 parms.Tsp_winter = 20; % temperature set-point from April to September [°C]
 parms.Tsp_summer = 22; % temperature set-point from October to March
 if m1 >= 4 & m1 <= 9 % if the starting month is a summer month Tsp will be setuped as Tsp summer
@@ -120,6 +118,7 @@ parms.beta = 1 - parms.alpha;
 %% Initialization
 Pc = zeros(Tf,1);        % air cooling power [kW] 
 Ph = zeros(Tf,1);        % air heating power [kW]
+Temperature_set_point = zeros(Tf,1); % just for graphics
 Pch = zeros(Tf,1);       % battery charging power [kW]
 Pdsc = zeros(Tf,1);      % battery discharging power [kW]
 Ppv = zeros(Tf,1);       % PV generation [kW]
@@ -130,6 +129,7 @@ Pg = zeros(Tf,1);        % Diesel generated power [kW]
 d_g = zeros(Tf,1);       % On-off DG support varaible
 Pul = zeros(Tf,1);       % Uncontrolled loads [kW]
 Pabp = zeros(Tf,1);      % Pabp Power Consumption [kW]
+active_phase = zeros(Tf,1); % Active Phases 
 T = zeros(Tf+1,1);       % Internal air temperature [°C]
 T(1) = T0;               % Initial Internal air temperature [°C]
 SoC = zeros(Tf+1,1);     % Battery state of charge [°C]
@@ -147,14 +147,23 @@ abp_varsk.d_abpk = zeros(parms.n_abp_phases,1);
 abp_varsk.Eabp_donek =  parms.Eabp; 
 abp_varsk.Tabp_donek =  parms.Tabp; 
 
-rng(11)
+rng(21)
 
-ur_hvac = [zeros(4,1);ones(16,1);zeros(4,1)];
+ur_hvac = [zeros(6,1);ones(13,1);zeros(5,1)];
 %ur_hvac = ones(24,1);
 ur_hvac = repmat(ur_hvac,4,1);
 
-k_start_abp = randi(10); % abp starting time - al massimo dura 14 ore, quindi per farlo finire nella fine della giornata deve iniziare al massimo alla decima ora
+%k_start_abp = randi(10); % abp starting time - al massimo dura 14 ore, quindi per farlo finire nella fine della giornata deve iniziare al massimo alla decima ora
+k_start_abp = 6;
 for k=1:Tf
+    % Setting Temperature set point
+    % Se l'indice è minore di 2160 o maggiore di 5832 
+    if idxs(k) >= 2160 && idxs(k) <= 5832
+        parms.Tsp = parms.Tsp_summer;
+    else
+        parms.Tsp = parms.Tsp_winter;
+    end
+    Temperature_set_point(k) = parms.Tsp;
 
     % get measurement
     Tk = T(k);
@@ -193,6 +202,7 @@ for k=1:Tf
     
     % compute control 
     [Pc(k),Ph(k),hat_Pchk,hat_Pdsck,hat_Pik,hat_Pek,Pabp(k),Pg(k),abp_varsk,d_g(k)] = compute_control_step(parms,pun_k,T_ex_forecast_k,P_PV_forecast_k,Pul_forecast_k,Tk,SoCk,ck,UR_hvac_k,UR_abp_k,abp_varsk);
+    
     
     
     % Compute battery limits
@@ -255,6 +265,11 @@ for k=1:Tf
     abp_varsk.Tabp_donek =  abp_varsk.Tabp_donek +  abp_varsk.d_abpk;
     abp_varsk.tabp_donek =  abp_varsk.tabp_donek +  abp_varsk.t_abpk;
     abp_varsk.Eabp_donek =  abp_varsk.Eabp_donek + parms.Dts*Pabp(k)*abp_varsk.d_abpk;
+
+    % salvo le fasi attive 
+    if abp_varsk.d_abpk(1)==1 || abp_varsk.d_abpk(2)==1 || abp_varsk.d_abpk(3)==1 || abp_varsk.d_abpk(4)==1
+        active_phase(k) = 1;
+    end
     
     % save current user requirements
     UR_hvac(k) = UR_hvac_k(1);
@@ -270,11 +285,11 @@ close all
 % Temperatures
 figure(1)
 subplot(3,1,1)
-plot(0:Tf,ones(Tf+1,1)*parms.Tsp,':','LineWidth',2)
+plot(0:Tf-1,Temperature_set_point,':','LineWidth',2)
 hold on
-plot(0:Tf,ones(Tf+1,1)*(parms.Tsp+parms.Delta),'LineWidth',1.5)
-plot(0:Tf,ones(Tf+1,1)*(parms.Tsp-parms.Delta),'LineWidth',1.5)
-plot(0:Tf,T,'k','LineWidth',1.5)
+plot(0:Tf-1,(Temperature_set_point+parms.Delta),'LineWidth',1.5)
+plot(0:Tf-1,(Temperature_set_point-parms.Delta),'LineWidth',1.5)
+plot(0:Tf-1,T(1:end-1),'k','LineWidth',1.5)
 plot(0:Tf-1,T_ex(1:Tf,2),'--','LineWidth',1.5)
 plot(0:Tf-1,T_ex(1:Tf,3),':','LineWidth',1.5)
 xlabel('Time [h]')
@@ -329,15 +344,22 @@ legend('Battery Power Exchange','Charging limit','Discharging limit')
 
 % ABP Power
 figure(5)
-subplot(2,1,1)
+subplot(3,1,1)
 stairs(0:Tf-1,Pabp,'LineWidth',1.5)
 xlabel('Time [h]')
 ylabel('Power [kW]')
 xlim([0 Tf-1])
 grid on
 legend('ABP Power Consumption')
+subplot(3,1,2)
+stairs(0:Tf-1,active_phase,'LineWidth',1.5)
+xlabel('Time [h]')
+ylabel('On/Off ABP')
+xlim([0 Tf-1])
+ylim([0 1.5])
+grid on
 % UR ABP
-subplot(2,1,2)
+subplot(3,1,3)
 stairs(0:Tf-1,UR_abp,'LineWidth',1.5)
 xlabel('Time [h]')
 xlim([0 Tf-1])
@@ -379,7 +401,6 @@ ylabel('Hourly Energy Cost [€]')
 legend('Imported energy cost','Exported energy income','Diesel generated energy cost')
 
 subplot(2,1,2)
-%stairs(0:Tf-1,cumsum(Pi.*c(1:Tf)*parms.Dts-Pscpv*parms.tdSCPV*parms.Dts),'LineWidth',1.5)
 stairs(0:Tf-1,Pi.*c(1:Tf)*parms.Dts-Pe.*pun(1:Tf)*parms.Dts+parms.cf*parms.Pnom_g.*d_g,'LineWidth',2.5)
 xlim([0 Tf-1])
 grid on
@@ -482,7 +503,6 @@ Pmax_abp.setValues(parms.Pmax_abp);
 
 Pmin_abp = ampl.getParameter('Pmin_abp');
 Pmin_abp.setValues(parms.Pmin_abp);
-
 
 Dts = ampl.getParameter('Dts');
 Dts.setValues(parms.Dts);

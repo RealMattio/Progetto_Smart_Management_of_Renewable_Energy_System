@@ -62,6 +62,7 @@ var Pg{J}>=0;
 var Pi{J}>=0;
 var Pe{J}>=0;
 var T{J};
+var eps{J}>=0;
 var SoC{J};
 var d_c{J} binary;
 var d_h{J} binary;
@@ -72,14 +73,13 @@ var t_abp{J,I} binary;
 var d_g{J} binary;
 
 # Objective function
-# minimize total_cost : sum {j in J} (c[j]*Pi[j] + tdSCPV*Pcurt[j]+100*eps[j]);
-minimize total_cost : sum {j in J} (c[j]*Pi[j] - pun*Pe[j] + cf*Pnom_g*d_g[j]);
+minimize total_cost : sum {j in J} (c[j]*Pi[j] - pun*Pe[j] + cf*Pg[j] + 100*eps[j]);
 
 #Constraints for HVAC
 subject to con_hvac_1 {j in J: ord(j)=1}:       T[j] == alpha*Tk-beta*R*(eta_c*Pc[j]-eta_h*Ph[j])+beta*Tex_forecast[j];
 subject to con_hvac_2 {j in J: ord(j)>1}:       T[j] == alpha*T[j-1]-beta*R*(eta_c*Pc[j]-eta_h*Ph[j])+beta*Tex_forecast[j];
-subject to con_hvac_3 {j in J}:                 T[j]*UR_hvac[j] <= (Tsp+Delta)*UR_hvac[j];
-subject to con_hvac_4 {j in J}:                 T[j]*UR_hvac[j] >= (Tsp-Delta)*UR_hvac[j];
+subject to con_hvac_3 {j in J}:                 T[j]*UR_hvac[j] <= (Tsp+Delta)*UR_hvac[j]+eps[j];
+subject to con_hvac_4 {j in J}:                 T[j]*UR_hvac[j] >= (Tsp-Delta)*UR_hvac[j]-eps[j];
 subject to con_hvac_5 {j in J}:                 Pc[j]<= d_c[j]*Pnom_hvac;
 subject to con_hvac_6 {j in J}:                 Ph[j]<= d_h[j]*Pnom_hvac;
 subject to con_hvac_7 {j in J}:                 d_h[j] + d_c[j]<= UR_hvac[j];
