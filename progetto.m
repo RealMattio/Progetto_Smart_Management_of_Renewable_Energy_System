@@ -1,8 +1,9 @@
 %% Problem data
-clear all
+clear 
 close all
 clc
 setupAMPL
+
 % Network import 
 parms.Pnom_i = 250; % maximal imported power [kW]
 parms.Pnom_e = 120; % maximal exported power [kW]
@@ -42,9 +43,9 @@ parms.Pmin_abp = [0 0 0 0]'; % minimal power for each phase [kW]
 
 % Selection of days
 months_days = [31 28 31 30 31 30 31 31 30 31 30 31];
-m1 = 6; %starting month
+m1 = 2; %starting month
 d1 = 15; %staring day
-m2 = 6; %end month
+m2 = 2; %end month
 d2 = 18; %end day
 idxs = (sum(months_days(1:m1-1))+(d1-1))*24+1:(sum(months_days(1:m2-1))+d2)*24+1;
 
@@ -57,7 +58,7 @@ parms.Tsp_summer = 22; % temperature set-point from October to March
 if m1 >= 4 & m1 <= 9 % if the starting month is a summer month Tsp will be setuped as Tsp summer
     parms.Tsp = parms.Tsp_summer;
 else
-    parms.TSP = parms.Tsp_winter;
+    parms.Tsp = parms.Tsp_winter;
 end
 parms.Delta  = 2; % temperature regulation tolerance [°C] 
 parms.SoCmin = 0.1; % desired minimal battery SoC [pu]
@@ -103,11 +104,12 @@ c = [cday;cday;cday;cday]; %two days+1 day for forecasts
 
 %% Control parameters
 parms.T = 18; % control time horizon
-battery_compensation = 1; % 1 to activate the error compensation with battery
+battery_compensation = 0; % 1 to activate the error compensation with battery
 
 %% Simulation parameters
 Tf = 24*3;
-T0 = parms.Tsp-1; % Initial temperature
+%T0 = parms.Tsp-1; % Initial temperature
+T0 = parms.Tsp+3*randn(1);
 SoC0 = 0.5; % Initial battery state of charge
 
 
@@ -145,9 +147,10 @@ abp_varsk.d_abpk = zeros(parms.n_abp_phases,1);
 abp_varsk.Eabp_donek =  parms.Eabp; 
 abp_varsk.Tabp_donek =  parms.Tabp; 
 
-%rng(11)
+rng(11)
 
-ur_hvac = [zeros(6,1);ones(12,1);zeros(6,1)];
+ur_hvac = [zeros(4,1);ones(16,1);zeros(4,1)];
+%ur_hvac = ones(24,1);
 ur_hvac = repmat(ur_hvac,4,1);
 
 k_start_abp = randi(10); % abp starting time - al massimo dura 14 ore, quindi per farlo finire nella fine della giornata deve iniziare al massimo alla decima ora
@@ -215,9 +218,17 @@ for k=1:Tf
     % simulate real system
     Ppv(k) = parms.Pnom_PV*Ir(k,3);
     Pul(k) = Uffici(k,3);
-    Pi(k) = Pc(k) + Ph(k) + hat_Pchk - hat_Pdsck - Ppv(k) + Pabp(k) + hat_Pek - Pg(k) + Pul(k);
-    Pe(k) = hat_Pek; % La potenza esportata è quella che l'ottimizzatore decide
+    %Pi(k) = Pc(k) + Ph(k) + hat_Pchk - hat_Pdsck - Ppv(k) + Pabp(k) + hat_Pek - Pg(k) + Pul(k);
+    %Pe(k) = hat_Pek; % La potenza esportata è quella che l'ottimizzatore decide
     %Pe(k) = hat_Pek + 
+    P_import = Pc(k) + Ph(k) + hat_Pchk + Pabp(k) + Pul(k);
+    P_export = hat_Pdsck + Ppv(k) + Pg(k);
+    if P_export > P_import
+        Pe(k) = P_export - P_import;
+    else
+        Pi(k) = P_import - P_export;
+    end
+
     
     if battery_compensation
         if Pi(k) ~= hat_Pik % forecast error must be compensated
