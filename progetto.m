@@ -43,14 +43,14 @@ parms.Pmin_abp = [0 0 0 0]'; % minimal power for each phase [kW]
 
 % Selection of days
 months_days = [31 28 31 30 31 30 31 31 30 31 30 31];
-m1 = 3; %starting month
-d1 = 31; %staring day
-m2 = 4; %end month
+m1 = 6; %starting month
+d1 = 30; %staring day
+m2 = 7; %end month
 d2 = 3; %end day
 idxs = (sum(months_days(1:m1-1))+(d1-1))*24+1:(sum(months_days(1:m2-1))+d2)*24+1;
 
 % Control specifications data
-% Se l'indice è minore di 2160 o maggiore di 5832 
+% Se l'indice è minore di 2160 o maggiore di 6552 
 parms.Tsp_winter = 20; % temperature set-point from April to September [°C]
 parms.Tsp_summer = 22; % temperature set-point from October to March
 if m1 >= 4 & m1 <= 9 % if the starting month is a summer month Tsp will be setuped as Tsp summer
@@ -123,8 +123,9 @@ Pch = zeros(Tf,1);       % battery charging power [kW]
 Pdsc = zeros(Tf,1);      % battery discharging power [kW]
 Ppv = zeros(Tf,1);       % PV generation [kW]
 Pi = zeros(Tf,1);        % Imported power [kW]
-Pi_eff = zeros(Tf,1);    % Effectively imported power [kW]
+hat_Pi = zeros(Tf,1);
 Pe = zeros(Tf,1);        % Exported power [kW]
+hat_Pe = zeros(Tf,1);
 Pg = zeros(Tf,1);        % Diesel generated power [kW]
 d_g = zeros(Tf,1);       % On-off DG support varaible
 Pul = zeros(Tf,1);       % Uncontrolled loads [kW]
@@ -153,12 +154,12 @@ ur_hvac = [zeros(6,1);ones(13,1);zeros(5,1)];
 %ur_hvac = ones(24,1);
 ur_hvac = repmat(ur_hvac,4,1);
 
-%k_start_abp = randi(10); % abp starting time - al massimo dura 14 ore, quindi per farlo finire nella fine della giornata deve iniziare al massimo alla decima ora
-k_start_abp = 6;
+k_start_abp = randi(6); % abp starting time - al massimo dura 14 ore, quindi per farlo finire nella fine della giornata deve iniziare al massimo alla decima ora
+%k_start_abp = 6;
 for k=1:Tf
     % Setting Temperature set point
-    % Se l'indice è minore di 2160 o maggiore di 5832 
-    if idxs(k) >= 2160 && idxs(k) <= 5832
+    % Se l'indice è minore di 2160 o maggiore di 6552 
+    if idxs(k) >= 2160 && idxs(k) <= 6552
         parms.Tsp = parms.Tsp_summer;
     else
         parms.Tsp = parms.Tsp_winter;
@@ -201,7 +202,7 @@ for k=1:Tf
     end
     
     % compute control 
-    [Pc(k),Ph(k),hat_Pchk,hat_Pdsck,hat_Pik,hat_Pek,Pabp(k),Pg(k),abp_varsk,d_g(k)] = compute_control_step(parms,pun_k,T_ex_forecast_k,P_PV_forecast_k,Pul_forecast_k,Tk,SoCk,ck,UR_hvac_k,UR_abp_k,abp_varsk);
+    [Pc(k),Ph(k),hat_Pchk,hat_Pdsck,hat_Pi(k),hat_Pe(k),Pabp(k),Pg(k),abp_varsk,d_g(k)] = compute_control_step(parms,pun_k,T_ex_forecast_k,P_PV_forecast_k,Pul_forecast_k,Tk,SoCk,ck,UR_hvac_k,UR_abp_k,abp_varsk);
     
     
     
@@ -228,9 +229,9 @@ for k=1:Tf
     % simulate real system
     Ppv(k) = parms.Pnom_PV*Ir(k,3);
     Pul(k) = Uffici(k,3);
-    %Pi(k) = Pc(k) + Ph(k) + hat_Pchk - hat_Pdsck - Ppv(k) + Pabp(k) + hat_Pek - Pg(k) + Pul(k);
-    %Pe(k) = hat_Pek; % La potenza esportata è quella che l'ottimizzatore decide
-    %Pe(k) = hat_Pek + 
+    %Pi(k) = Pc(k) + Ph(k) + hat_Pchk - hat_Pdsck - Ppv(k) + Pabp(k) + hat_Pe(k) - Pg(k) + Pul(k);
+    %Pe(k) = hat_Pe(k); % La potenza esportata è quella che l'ottimizzatore decide
+    %Pe(k) = hat_Pe(k) + 
     P_import = Pc(k) + Ph(k) + hat_Pchk + Pabp(k) + Pul(k);
     P_export = hat_Pdsck + Ppv(k) + Pg(k);
     if P_export > P_import
@@ -241,8 +242,8 @@ for k=1:Tf
 
     
     if battery_compensation
-        if Pi(k) ~= hat_Pik % forecast error must be compensated
-            Pbk = hat_Pik -Pc(k) - Ph(k) + Ppv(k) - Pabp(k) - Pul(k) + Pg(k);% Try to compensate with battery
+        if Pi(k) ~= hat_Pi(k) % forecast error must be compensated
+            Pbk = hat_Pi(k) -Pc(k) - Ph(k) + Ppv(k) - Pabp(k) - Pul(k) + Pg(k);% Try to compensate with battery
             Pbk = max(Pbk,temp_Pb_min); % Saturate battery
             Pbk = min(Pbk,temp_Pb_max);
             Pch(k) = max(0,Pbk);
@@ -381,7 +382,7 @@ plot(0:Tf-1,Pe,'red','LineWidth',2)
 %plot(0:Tf-1,Ppv+Pg+Pi+Pdsc,'-.') % energia prodotta e importata
 grid on
 box on
-legend('HVAC Power Consumption','Battery Power Exchange','PV Generation','Uncontrolled Loads','ABP Power Consumption','Diesel Generated Power','Imported power','Exported Power')
+legend('HVAC Power Consumption','Battery Power Exchange','PV Generation','Uncontrolled Loads','ABP Power Consumption','Diesel Generated Power','Imported Power','Exported Power')
 %legend('HVAC Power Consumption','Battery Power Exchange','PV Generation','Uncontrolled Loads','ABP Power Consumption','Diesel Generated Power','Imported power','Exported Power','Absorbed Power', 'Produced Power')
 xlim([0 Tf-1])
 xlabel('Time [h]')
@@ -406,6 +407,31 @@ xlim([0 Tf-1])
 grid on
 ylabel('Total Energy Cost [€]')
 
+%confronto tra predizioni e realtà di export e import
+figure(8);
+subplot(2, 1, 1);  % Divide la figura in 2 righe e 1 colonna, seleziona il primo grafico
+plot(0:Tf-1, Pe, 'b', 'LineWidth', 1.5);  % Plot di Pe in blu
+hold on
+plot(0:Tf-1, hat_Pe, 'r', 'LineWidth', 1.5);  % Plot di hat_Pe in rosso
+xlabel('Time [h]');
+ylabel('Exported Power [kW]');
+legend('Real', 'Prediction');
+xlim([0 Tf-1])
+grid on;
+
+% Secondo grafico: hat_Pe
+subplot(2, 1, 2);  % Seleziona il secondo grafico
+plot(0:Tf-1, Pi, 'b', 'LineWidth', 1.5);  % Plot di Pe in blu
+hold on
+plot(0:Tf-1, hat_Pi, 'r', 'LineWidth', 1.5);  % Plot di hat_Pe in rosso
+xlabel('Time [h]');
+ylabel('Imported Power [kW]');
+legend('Real', 'Prediction');
+xlim([0 Tf-1])
+grid on;
+
+% Aggiustamento automatico dello spazio tra i subplot
+sgtitle('Confronto tra previsioni e realtà della potenza esportata e importata');  % Titolo generale della figura
 
 
 %% MPC step

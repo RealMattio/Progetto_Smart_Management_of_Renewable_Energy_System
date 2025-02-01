@@ -84,6 +84,7 @@ subject to con_hvac_5 {j in J}:                 Pc[j]<= d_c[j]*Pnom_hvac;
 subject to con_hvac_6 {j in J}:                 Ph[j]<= d_h[j]*Pnom_hvac;
 subject to con_hvac_7 {j in J}:                 d_h[j] + d_c[j]<= UR_hvac[j];
 
+
 #Constraints for battery
 subject to con_battery_1  {j in J: ord(j)=1}:   SoC[j] == SoCk + Dts/Eb*(eta_ch*Pch[j]-1/eta_dsc*Pdsc[j]);
 subject to con_battery_2  {j in J: ord(j)>1}:   SoC[j] == SoC[j-1] + Dts/Eb*(eta_ch*Pch[j]-1/eta_dsc*Pdsc[j]);
