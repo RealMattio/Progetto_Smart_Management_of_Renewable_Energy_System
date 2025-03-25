@@ -43,10 +43,10 @@ parms.Pmin_abp = [0 0 0 0]'; % minimal power for each phase [kW]
 
 % Selection of days
 months_days = [31 28 31 30 31 30 31 31 30 31 30 31];
-m1 = 6; %starting month
-d1 = 30; %staring day
+m1 = 7; %starting month
+d1 = 10; %staring day
 m2 = 7; %end month
-d2 = 3; %end day
+d2 = 13; %end day
 idxs = (sum(months_days(1:m1-1))+(d1-1))*24+1:(sum(months_days(1:m2-1))+d2)*24+1;
 
 % Control specifications data
@@ -71,12 +71,21 @@ load T_ex_rome_campus_bio_medico_2022.mat
 T_ex = T_ex(idxs,:);
 
 % Solar irradiation data
-load FALSA_previsione_irraggiamento.mat
+% Format:[Step, actual Ir (°C), real Ir (°C)]
+Ir = xlsread('Hybrid_model_single_forecast_irragiamento96h.xlsx');
+% Add zeros rows and exchange the columns for idexes compatibility
+Ir = [zeros(4440,3); Ir(:,1), Ir(:,3), Ir(:,2); zeros(2976,3)];
+%load FALSA_previsione_irraggiamento.mat
 % Format:[hour,forecasted Ir (°C), actual Ir (°C)] - Variable name: Ir
 Ir = Ir(idxs,:);
 
+
 % Uncontrolled loads
-load FALSA_previsione_uffici.mat
+% Format: [step, real power [W], forecasted power [W]]
+Uffici = xlsread("Hybrid_model_single_forecast_24h.xlsx");
+% Add zeros rows and exchange the columns for idexes compatibility
+Uffici = [zeros(4368,3); Uffici(:,1), Uffici(:,3), Uffici(:,2); zeros(2952,3)];
+%load FALSA_previsione_uffici.mat
 % Format: [hour, forecasted power [W], actual power [W]] - Variable name : Uffici
 Uffici = Uffici(idxs,:);
 Uffici(:,[2,3]) = Uffici(:,[2,3])/1000;
@@ -101,7 +110,7 @@ c = [cday;cday;cday;cday]; %two days+1 day for forecasts
 
 
 %% Control parameters
-parms.T = 18; % control time horizon
+parms.T = 16; % control time horizon
 battery_compensation = 0; % 1 to activate the error compensation with battery
 
 %% Simulation parameters
