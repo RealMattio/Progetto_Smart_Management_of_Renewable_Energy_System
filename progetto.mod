@@ -8,6 +8,7 @@ param Pnom_i;
 param Pnom_e;
 # --- Non-Renewable DG
 param Pnom_g;
+param Pmin_g;
 param eta_g;
 param cf;
 # --- HVAC
@@ -59,6 +60,7 @@ var Pdsc{J} >= 0;
 var Pabp{J,I} >= 0;
 var Pabp_tot{J} >= 0;
 var Pg{J}>=0;
+var Pcar{J}>=0;
 var Pi{J}>=0;
 var Pe{J}>=0;
 var T{J};
@@ -73,7 +75,7 @@ var t_abp{J,I} binary;
 var d_g{J} binary;
 
 # Objective function
-minimize total_cost : sum {j in J} (c[j]*Pi[j] - pun*Pe[j] + cf*Pg[j] + 100*eps[j]);
+minimize total_cost : sum {j in J} (c[j]*Pi[j] - pun*Pe[j] + cf*Pcar[j] + 100*eps[j]);
 
 #Constraints for HVAC
 subject to con_hvac_1 {j in J: ord(j)=1}:       T[j] == alpha*Tk-beta*R*(eta_c*Pc[j]-eta_h*Ph[j])+beta*Tex_forecast[j];
@@ -95,7 +97,7 @@ subject to con_battery_6  {j in J}:             Pdsc[j]<= (1-d_b[j])*Pnom_b;
 
 #Constraints for ABP
 subject to con_abp_1 {i in I}:                            sum {j in J} (Dts*Pabp[j,i]) = Eabp[i]-Eabp_done[i]; 
-subject to con_abp_2 {i in I}:                            sum {j in J} (d_abp[j,i]) = Tabp[i]-Tabp_done[i];
+subject to con_abp_2 {i in I}:                            sum {j in J} (d_abp[j,i]) == Tabp[i]-Tabp_done[i];
 subject to con_abp_3 {j in J, i in I}:                    Pabp[j,i]<= d_abp[j,i]*Pmax_abp[i];
 subject to con_abp_4 {j in J, i in I}:                    Pabp[j,i]>= d_abp[j,i]*Pmin_abp[i];
 subject to con_abp_5 {j in J, i in I}:                    d_abp[j,i]+s_abp[j,i]<=1;
@@ -110,7 +112,9 @@ subject to con_abp_13 {j in J, i in I}:                   d_abp[j,i] <= UR_abp[j
 subject to con_abp_14 {j in J}:                           Pabp_tot[j] == sum {i in I} (Pabp[j,i]); 
 
 #Constraints for Diesel Generator
-subject to con_DG_1 {j in J}:                     Pg[j] = d_g[j]*Pnom_g*eta_g;
+subject to con_DG_1 {j in J}:                     Pg[j] >= d_g[j]*Pmin_g;
+subject to con_DG_2 {j in J}:                     Pg[j] <= d_g[j]*Pnom_g;
+subject to con_DG_3 {j in J}:                     Pcar[j] == Pg[j]/eta_g;
 
 #Constraints for system
 subject to con_system_1 {j in J}:                 Pi[j] - Pe[j] == Pc[j]+Ph[j]+Pch[j]-Pdsc[j]-P_PV_forecast[j]+Pabp_tot[j]+Pul_forecast[j]-Pg[j];

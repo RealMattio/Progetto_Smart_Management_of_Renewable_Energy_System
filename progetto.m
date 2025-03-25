@@ -10,6 +10,7 @@ parms.Pnom_e = 120; % maximal exported power [kW]
 
 % Non-Renewable DG
 parms.Pnom_g = 80; % maximal power DG [kW]
+parms.Pmin_g = parms.Pnom_g*0.3; 
 parms.eta_g = 0.6; % DGs efficiency
 parms.cf = 0.45; % price of fuel [€/kWh]
 
@@ -466,6 +467,9 @@ Pnom_e.setValues(parms.Pnom_e);
 
 Pnom_g = ampl.getParameter('Pnom_g');
 Pnom_g.setValues(parms.Pnom_g);
+
+Pmin_g = ampl.getParameter('Pmin_g');
+Pmin_g.setValues(parms.Pmin_g);
 
 eta_g = ampl.getParameter('eta_g');
 eta_g.setValues(parms.eta_g);
