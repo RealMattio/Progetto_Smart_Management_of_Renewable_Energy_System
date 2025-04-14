@@ -4,6 +4,7 @@ close all
 clc
 setupAMPL
 
+rng(42)
 % Network import 
 parms.Pnom_i = 250; % maximal imported power [kW]
 parms.Pnom_e = 120; % maximal exported power [kW]
@@ -30,7 +31,7 @@ parms.Pnom_PV = 120; % Nominal power at 1kW/m2 [kW]
 
 % Battery data
 parms.Pnom_b = 150; % Battery nominal power [kW]
-parms.Eb = 150; % Battery capaciy [kWh]
+parms.Eb = 150; % Battery capaciy [kWh] - 150 kWh
 parms.eta_ch = 0.95; % Battery charging efficiency [pu]
 parms.eta_dsc = 0.95; % Battery discharging efficiency [pu]
 
@@ -46,8 +47,8 @@ parms.Pmin_abp = [0 0 0 0]'; % minimal power for each phase [kW]
 months_days = [31 28 31 30 31 30 31 31 30 31 30 31];
 m1 = 7; %starting month
 d1 = 10; %staring day
-m2 = 7; %end month
-d2 = 13; %end day
+m2 = 8; %end month
+d2 = 10; %end day
 idxs = (sum(months_days(1:m1-1))+(d1-1))*24+1:(sum(months_days(1:m2-1))+d2)*24+1;
 
 % Control specifications data
@@ -72,11 +73,16 @@ load T_ex_rome_campus_bio_medico_2022.mat
 T_ex = T_ex(idxs,:);
 
 % Solar irradiation data
-% Format:[Step, actual Ir (°C), real Ir (°C)]
+% Format:[Step, actual Ir (°C), predicted Ir (°C)]
 Ir = xlsread('Hybrid_model_single_forecast_irragiamento96h.xlsx');
+%Ir = xlsread('Previsione_irraggiamento_peggiore.xlsx');
 % Add zeros rows and exchange the columns for idexes compatibility
 Ir = [zeros(4440,3); Ir(:,1), Ir(:,3), Ir(:,2); zeros(2976,3)];
+% Test della bontà delle stime
+Ir = [Ir(:,1), Ir(:,3), Ir(:,3)];
+
 %load FALSA_previsione_irraggiamento.mat
+%load Falsa_previsione_irraggiamento2.mat
 % Format:[hour,forecasted Ir (°C), actual Ir (°C)] - Variable name: Ir
 Ir = Ir(idxs,:);
 
@@ -84,9 +90,13 @@ Ir = Ir(idxs,:);
 % Uncontrolled loads
 % Format: [step, real power [W], forecasted power [W]]
 Uffici = xlsread("Hybrid_model_single_forecast_24h.xlsx");
+%Uffici = xlsread("Previsione_uffici_peggiore.xlsx");
 % Add zeros rows and exchange the columns for idexes compatibility
 Uffici = [zeros(4368,3); Uffici(:,1), Uffici(:,3), Uffici(:,2); zeros(2952,3)];
+% Test della bontà delle stime
+Uffici = [Uffici(:,1), Uffici(:,3), Uffici(:,3)];
 %load FALSA_previsione_uffici.mat
+%load Falsa_previsione_uffici2.mat
 % Format: [hour, forecasted power [W], actual power [W]] - Variable name : Uffici
 Uffici = Uffici(idxs,:);
 Uffici(:,[2,3]) = Uffici(:,[2,3])/1000;
@@ -102,12 +112,13 @@ priceF1 = 0.53276; % F1 price [eur/kWh]
 priceF2 = 0.54858; % F2 price [eur/kWh]
 priceF3 = 0.46868; % F3 price [eur/kWh]
 % assuming working days
+n_giorni_simulazione = 31;
 cday = [ones(6,1)*priceF3;
         priceF2;
         ones(11,1)*priceF1;
         ones(4,1)*priceF2;
         ones(2,1)*priceF3];  
-c = [cday;cday;cday;cday]; %two days+1 day for forecasts
+c = repmat(cday,n_giorni_simulazione+1,1); %two days+1 day for forecasts
 
 
 %% Control parameters
@@ -115,9 +126,9 @@ parms.T = 16; % control time horizon
 battery_compensation = 0; % 1 to activate the error compensation with battery
 
 %% Simulation parameters
-Tf = 24*3;
+Tf = 24*n_giorni_simulazione;
 %T0 = parms.Tsp-1; % Initial temperature
-T0 = parms.Tsp+3*randn(1);
+T0 = parms.Tsp+randn;
 SoC0 = 0.5; % Initial battery state of charge
 
 
@@ -162,7 +173,7 @@ rng(21)
 
 ur_hvac = [zeros(6,1);ones(13,1);zeros(5,1)];
 %ur_hvac = ones(24,1);
-ur_hvac = repmat(ur_hvac,4,1);
+ur_hvac = repmat(ur_hvac,n_giorni_simulazione+1,1);
 
 k_start_abp = randi(6); % abp starting time - al massimo dura 14 ore, quindi per farlo finire nella fine della giornata deve iniziare al massimo alla decima ora
 %k_start_abp = 6;
@@ -354,7 +365,7 @@ legend('Battery Power Exchange','Charging limit','Discharging limit')
 
 
 % ABP Power
-figure(5)
+figure(3)
 subplot(3,1,1)
 stairs(0:Tf-1,Pabp,'LineWidth',1.5)
 xlabel('Time [h]')
@@ -378,7 +389,7 @@ grid on
 legend('ABP User Requirements')
 
 % Powers
-figure(6)
+figure(4)
 hold on
 plot(0:Tf-1,Pc+Ph,'cyan','LineWidth',1.5)
 plot(0:Tf-1,Pch-Pdsc,'green','LineWidth',1.5)
@@ -399,7 +410,7 @@ xlabel('Time [h]')
 ylabel('Power [kW]')
 
 % Costs
-figure(7)
+figure(5)
 subplot(2,1,1)
 stairs(0:Tf-1,Pi.*c(1:Tf)*parms.Dts,'r','LineWidth',2.5)
 hold on
@@ -416,9 +427,11 @@ stairs(0:Tf-1,Pi.*c(1:Tf)*parms.Dts-Pe.*pun(1:Tf)*parms.Dts+parms.cf*parms.Pnom_
 xlim([0 Tf-1])
 grid on
 ylabel('Total Energy Cost [€]')
+costo_totale = sum(Pi.*c(1:Tf)*parms.Dts-Pe.*pun(1:Tf)*parms.Dts+parms.cf*parms.Pnom_g.*d_g);
+fprintf("Totale energy cost: %.2f €\n", costo_totale);
 
 %confronto tra predizioni e realtà di export e import
-figure(8);
+figure(6);
 subplot(2, 1, 1);  % Divide la figura in 2 righe e 1 colonna, seleziona il primo grafico
 plot(0:Tf-1, Pe, 'b', 'LineWidth', 1.5);  % Plot di Pe in blu
 hold on
